@@ -73,12 +73,13 @@ class UCIHARDataset:
         else:
             self.feature_names = self.features_df['feature_name'].tolist()
 
-        # Load activity_labels.txt as Pandas DataFrame
+        # Load activity_labels.txt as Pandas DataFrame (zero-indexed: 0 to 5)
         self.activity_labels_df = pd.read_csv(
             activity_file, sep=r'\s+', header=None, names=['activity_id', 'activity_name']
         )
+        self.activity_labels_df['activity_id'] = self.activity_labels_df['activity_id'] - 1
 
-        # Store dictionary mapping activity ID (number) -> activity name
+        # Store dictionary mapping activity ID (0-5) -> activity name
         self.activity_map = dict(
             zip(self.activity_labels_df['activity_id'], self.activity_labels_df['activity_name'])
         )
@@ -125,9 +126,10 @@ class UCIHARDataset:
             if not file_path.exists():
                 raise FileNotFoundError(f"File not found: {file_path}")
 
-        # Internally represent text files as DataFrames
+        # Internally represent text files as DataFrames (zero-index target values)
         X_df = pd.read_csv(x_file, sep=r'\s+', header=None, names=self.feature_names)
         y_df = pd.read_csv(y_file, header=None, names=['target'])
+        y_df['target'] = y_df['target'] - 1
         y_df['target_name'] = y_df['target'].map(self.activity_map)
         sub_df = pd.read_csv(sub_file, header=None, names=['subject_id'])
 
