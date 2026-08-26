@@ -227,11 +227,11 @@ DATASET_PATH = "/Users/calogeroforte/work/Python_work_area/9_1_Test_ML_DL/Datase
 
 if __name__ == "__main__":
     uci = UCIHARDataLoader(dataset_path=DATASET_PATH)
-    train_df = uci.build_dataframe(is_train=True, save_to_csv=False)
-    # test_df = uci.build_dataframe(is_train=False, save_to_csv=False)
+    # train_df = uci.build_dataframe(is_train=True, save_to_csv=False)
+    test_df = uci.build_dataframe(is_train=False, save_to_csv=False)
     # full_df = uci.build_full_dataframe(save_to_csv=False)
     # print(train_df.head())
     # print(test_df.head())
     # print(full_df.head())
-    uci.save_csv(train_df, is_train=True, output_path="/Users/calogeroforte/work/Python_work_area/9_1_Test_ML_DL/Code/Exam/Dataset/train_dataset.csv")
-    
+    # uci.save_csv(train_df, is_train=True, output_path="/Users/calogeroforte/work/Python_work_area/9_1_Test_ML_DL/Code/Exam/Dataset/train_dataset.csv")
+    uci.save_csv(test_df, is_train=False, output_path="/Users/calogeroforte/work/Python_work_area/9_1_Test_ML_DL/Code/Exam/Dataset/test_dataset.csv")
