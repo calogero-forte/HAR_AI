@@ -9,6 +9,7 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import pandas as pd
+# pyrefly: ignore [missing-import]
 import global_variables
 
 def reduce_by_variance(df_i: pd.DataFrame, threshold_i: float = 0.1) -> pd.DataFrame:

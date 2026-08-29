@@ -3,13 +3,14 @@
 # Imports
 #------------------------------
 
+# pyrefly: ignore [missing-import]
 from dataset_preparation.dataset_handler import DatasetHandler
-
+# pyrefly: ignore [missing-import]
 from classification.random_forest import RandomForest
+# pyrefly: ignore [missing-import]
+from evaluation.eval_utilities import print_classification_report, print_accuracy, plot_confution_matrix
 
 from sklearn.preprocessing import StandardScaler
-
-from evaluation.eval_utilities import print_classification_report, print_accuracy, plot_confution_matrix
 
 
 #------------------------------
