@@ -1,11 +1,14 @@
 """
-Python placeholder module to write and test separately new functions
+This module contains util functions to 
+compute statistcal metrics on Pandas DataFrames
 """
 
-from typing import List, Optional, Tuple, Union, Dict
-import numpy as np
+#------------------------------
+# Imports
+#------------------------------
 import pandas as pd
-
+import numpy as np
+from typing import List, Optional, Tuple, Dict, Union
 
 def study_correlation(
     df: pd.DataFrame, abs_val: bool = True, tri_sup: bool = True, threshold: Optional[float] = None
@@ -53,7 +56,10 @@ def study_correlation(
             for j in range(i + 1, corr_matrix.shape[1]):
                 if corr_matrix[i, j] >= threshold:
                     high_corr[(i, j)] = corr_matrix[i, j]
+
     return corr_matrix, high_corr
+
+#----------------------------------------
 
 def remove_correlated_features(
     X: Union[pd.DataFrame, np.ndarray], high_corr: Dict[Tuple[int, int], float]
@@ -91,21 +97,3 @@ def remove_correlated_features(
         X_filtered = X[:, support]
 
     return X_filtered, support
-
-
-if __name__ == "__main__":
-    X = np.array([
-      [0.0, 0.9, 0.5, 0.7],
-      [.0, .0, .7, .3],
-      [.0, .0, .0, .9],
-      [.0, .0, .0, .0]
-    ])
-
-    threshold = 0.75
-    high_corr = {}
-    for i in range(X.shape[0]):
-      for j in range(i + 1, X.shape[1]):
-          if X[i, j] >= threshold:
-              high_corr[(i, j)] = X[i, j]
-
-    print(high_corr)
