@@ -6,9 +6,12 @@ compute statistcal metrics on Pandas DataFrames
 #------------------------------
 # Imports
 #------------------------------
+import logging
 import pandas as pd
 import numpy as np
 from typing import List, Optional, Tuple, Dict, Union
+
+logger = logging.getLogger(__name__)
 
 def study_correlation(
     df: pd.DataFrame, abs_val: bool = True, tri_sup: bool = True, threshold: Optional[float] = None
@@ -37,6 +40,7 @@ def study_correlation(
         - Optional[dict]: Dictionary with keys as (j, i) = feature j correlated with feature i (where j > i), 
               and values as the correlation value, or None if threshold is not provided.
     """
+    logger.info(f"Computing correlation matrix for DataFrame of shape {df.shape} (abs_val={abs_val}, tri_sup={tri_sup}, threshold={threshold})")
     corr_matrix = (df.corr()).to_numpy()
     if abs_val:
         corr_matrix = np.abs(corr_matrix)
@@ -56,6 +60,7 @@ def study_correlation(
             for j in range(i + 1, corr_matrix.shape[1]):
                 if corr_matrix[i, j] >= threshold:
                     high_corr[(i, j)] = corr_matrix[i, j]
+        logger.info(f"Found {len(high_corr)} feature pairs exceeding correlation threshold {threshold}")
 
     return corr_matrix, high_corr
 
@@ -95,5 +100,8 @@ def remove_correlated_features(
         X_filtered = X.iloc[:, support]
     else:
         X_filtered = X[:, support]
+
+    dropped_count = n_features - np.sum(support)
+    logger.info(f"Removed correlated features: dropped {dropped_count}/{n_features} features, remaining={X_filtered.shape[1]}")
 
     return X_filtered, support

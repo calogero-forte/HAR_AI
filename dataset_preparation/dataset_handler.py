@@ -1,5 +1,8 @@
+import logging
 import pandas as pd
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 class DatasetHandler:
@@ -14,6 +17,7 @@ class DatasetHandler:
 
         #----------------------------------------
         # Load training set in a Pandas Dataframe
+        logger.info(f"Loading training dataset from: {train_dataset_path_i}")
         df_train = pd.read_csv(train_dataset_path_i)
 
         # Store target numbers and labels
@@ -25,9 +29,11 @@ class DatasetHandler:
         self._X_train = df_train.drop(labels=['subject_id', 'target_name', 'target'], axis=1)
         feat_name_orig = df_train.columns.to_numpy(dtype=str)
         self._features_names = feat_name_orig[1 : -2].copy()
+        logger.info(f"Training dataset loaded: {self._X_train.shape[0]} samples, {self._X_train.shape[1]} features")
 
         #----------------------------------------
-        # Load training set in a Pandas Dataframe
+        # Load test set in a Pandas Dataframe
+        logger.info(f"Loading test dataset from: {test_dataset_path_i}")
         df_test = pd.read_csv(test_dataset_path_i)
 
         # Store test targets
@@ -36,6 +42,7 @@ class DatasetHandler:
         # Build and store X_test (feature names are already stored from train_set)
         # Remove subject id, target name (which is string so gives problems) and target
         self._X_test = df_test.drop(labels=['subject_id', 'target_name', 'target'], axis=1)
+        logger.info(f"Test dataset loaded: {self._X_test.shape[0]} samples, {self._X_test.shape[1]} features")
 
         # Maintain a list of the modified train and test dataframes
         self.__train_modified = list[pd.DataFrame]()
@@ -65,11 +72,13 @@ class DatasetHandler:
     
     def update_train_dataset(self, df: pd.DataFrame) -> None:
         self.__train_modified.append(df.copy())
+        logger.info(f"Updated modified train dataset list (buffer size: {len(self.__train_modified)}, shape: {df.shape})")
 
     #----------------------------------------
 
     def update_test_dataset(self, df: pd.DataFrame) -> None:
         self.__test_modified.append(df.copy())
+        logger.info(f"Updated modified test dataset list (buffer size: {len(self.__test_modified)}, shape: {df.shape})")
 
     #----------------------------------------
 

@@ -2,11 +2,14 @@
 This module contains utilities to plot several types of graphs.
 """
 
+import logging
 import math
 from typing import Any
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+logger = logging.getLogger(__name__)
 
 ########################################
 
@@ -43,6 +46,7 @@ def plot_xy_series(
     """
     import matplotlib.pyplot as plt
 
+    logger.info(f"Generating X-Y series plot: '{title_i}'")
     # Create a figure of 6x6 inches and resolution 250 ppi 
     fig = plt.figure(figsize=[5.4, 3.8],facecolor='skyblue', edgecolor='black',dpi=300) 
     # Create an axes object that fullfils the figure (0, 0, 1, 1). Default projection is rectilier.
@@ -88,6 +92,7 @@ def plot_heatmap(
     None
     """
     
+    logger.info(f"Generating heatmap plot: '{title_i}' for data matrix shape: {np.shape(data_i)}")
 
     fig = plt.figure(figsize=[5.4, 3.8], dpi=300)
     ax = fig.add_axes([0,0,1,1])
@@ -137,6 +142,8 @@ def plot_scatter(
     ------
     None
     """
+
+    logger.info(f"Generating 2D scatter plot: '{title_i}' for data shape: {np.shape(data_i)}")
 
     plt.figure(figsize=[6, 4.5], dpi=300)
     plt.xlabel(xlabel_i)
@@ -200,6 +207,8 @@ def plot_scatter_3d(
     ------
     None
     """
+
+    logger.info(f"Generating 3D scatter plot: '{title_i}' for data shape: {np.shape(data_i)}")
 
     fig = plt.figure(figsize=[6, 4.5], dpi=300)
     ax = fig.add_subplot(111, projection='3d')
