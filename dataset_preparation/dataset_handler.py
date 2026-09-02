@@ -1,3 +1,5 @@
+from pandas._libs import indexing
+from pandas._libs import indexing
 import logging
 import pandas as pd
 import numpy as np
@@ -82,9 +84,21 @@ class DatasetHandler:
 
     #----------------------------------------
 
-    def get_train_dataset_list(self) -> list[pd.DataFrame]:
-        return self.__train_modified
+    def get_train_dataset_by_index(self, idx_i: int) -> pd.DataFrame:
+        if(idx_i == -1 and len(self.__train_modified) > 0):
+            return self.__train_modified[-1]
+        if( idx_i >= 0 and idx_i < len(self.__train_modified) ):
+            return self.__train_modified[idx_i]
+        else:
+            logger.error(f"Index {idx_i} is out of bounds for train dataset with size {len(self.__train_modified)}")
+            
         
 
-    def get_test_dataset_list(self) -> list[pd.DataFrame]:
-        return self.__test_modified
+    def get_test_dataset_by_index(self, idx_i: int) -> pd.DataFrame:
+        if(idx_i == -1 and len(self.__test_modified) > 0):
+            return self.__test_modified[-1]
+        if( idx_i >= 0 and idx_i < len(self.__test_modified) ):
+            return self.__test_modified[idx_i]
+        else:
+            logger.error(f"Index {idx_i} is out of bounds for test dataset with size {len(self.__test_modified)}")
+            

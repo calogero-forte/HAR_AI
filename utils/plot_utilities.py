@@ -2,6 +2,7 @@
 This module contains utilities to plot several types of graphs.
 """
 
+from typing import Optional
 import logging
 import math
 from typing import Any
@@ -44,7 +45,6 @@ def plot_xy_series(
     -------
     None
     """
-    import matplotlib.pyplot as plt
 
     logger.info(f"Generating X-Y series plot: '{title_i}'")
     # Create a figure of 6x6 inches and resolution 250 ppi 
@@ -226,6 +226,55 @@ def plot_scatter_3d(
 
     else:
         ax.scatter(xs=data_i[:, 0], ys=data_i[:, 1], zs=data_i[:, 2], marker=marker_i)
+
+    plt.tight_layout()
+    plt.show()
+
+########################################
+
+def plot_series(
+    data_i: list[np.array],
+    labels_i: Optional[list[str]] = None,
+    title_i: str = 'Series plot',
+    xlabel_i: str = 'x_label',
+    ylabel_i: str = 'y_label'
+) -> None:
+    """
+    Plot a list of numeric series.
+
+    Parameters
+    ----------
+    data_i : list[np.array]
+        list of series to plot
+    labels_i : list[str]
+        labels of the plot. It shall be of the same size of data_i.
+        Default is None.
+    title_i : str
+        title of the plot. Default is 'Series plot'
+    xlabel_i : str
+        label of the x-axis. Default is 'xlabel'
+    ylabel_i : str
+        label of the y-axis. Default is 'ylabel'
+    Return
+    ------
+    None
+    """
+
+    logger.info(f"Generating series plot: '{title_i}' for data shape: {np.shape(data_i)}")
+
+    fig = plt.figure(figsize=[6, 4.5], dpi=300)
+    ax = fig.add_axes([0,0,1,1])
+    ax.set_xlabel(xlabel_i)
+    ax.set_ylabel(ylabel_i)
+    ax.set_title(title_i)
+
+    if(labels_i is not None and len(labels_i) == len(data_i)):
+        for idx, data in enumerate(data_i):
+            ax.plot( range(len(data)), data, label=labels_i[idx] )
+        ax.legend()
+    else:
+        for idx, data in enumerate(data_i):
+            ax.plot( range(len(data)), data)
 
     plt.tight_layout()
     plt.show()

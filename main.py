@@ -42,8 +42,8 @@ handler.update_test_dataset(X_test_df)
 # Scaler
 logger.info("Scaling features using StandardScaler...")
 scaler = StandardScaler()
-X_train_std = scaler.fit_transform( handler.get_train_dataset_list()[-1] )
-X_test_std = scaler.transform( handler.get_test_dataset_list()[-1] )
+X_train_std = scaler.fit_transform( handler.get_train_dataset_by_index(-1) )
+X_test_std = scaler.transform( handler.get_test_dataset_by_index(-1) )
 
 #------------------------------
 # Find best parameters
