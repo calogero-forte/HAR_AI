@@ -13,12 +13,11 @@ from typing import List, Optional, Tuple, Dict, Union
 
 logger = logging.getLogger(__name__)
 
-def study_correlation(
-    df: pd.DataFrame, abs_val: bool = True, tri_sup: bool = True, threshold: Optional[float] = None
-) -> Tuple[np.ndarray, Optional[List[int]]]:
+def compute_correlation(
+    df: pd.DataFrame, abs_val: bool = True, tri_sup: bool = True) -> Tuple[np.ndarray, Optional[List[int]]]:
     """
     Computes the correlation matrix for a DataFrame with options for absolute values
-    and upper triangular filtering. Optionally identifies column indices exceeding a correlation threshold.
+    and upper triangular filtering. 
 
     Parameters
     ----------
@@ -29,18 +28,13 @@ def study_correlation(
     tri_sup : bool, default=True
         If True, retains only the upper triangular part of the matrix (where j > i),
         setting all other entries to zero.
-    threshold : float, optional
-        Correlation threshold. If provided, returns a list of column indices where correlation
-        exceeds this threshold.
 
     Returns
     -------
     Tuple[np.ndarray, Optional[dict]]: 
         - np.ndarray: Processed correlation matrix.
-        - Optional[dict]: Dictionary with keys as (j, i) = feature j correlated with feature i (where j > i), 
-              and values as the correlation value, or None if threshold is not provided.
     """
-    logger.info(f"Computing correlation matrix for DataFrame of shape {df.shape} (abs_val={abs_val}, tri_sup={tri_sup}, threshold={threshold})")
+    logger.info(f"Computing correlation matrix for DataFrame of shape {df.shape} (abs_val={abs_val}, tri_sup={tri_sup})")
     corr_matrix = (df.corr()).to_numpy()
     if abs_val:
         corr_matrix = np.abs(corr_matrix)
@@ -53,33 +47,32 @@ def study_correlation(
                     corr_sup[i, j] = corr_matrix[i, j]
         corr_matrix = corr_sup
 
-    high_corr: Optional[dict] = None
-    if threshold is not None:
-        high_corr = {}
-        for i in range(corr_matrix.shape[0]):
-            for j in range(i + 1, corr_matrix.shape[1]):
-                if corr_matrix[i, j] >= threshold:
-                    high_corr[(i, j)] = corr_matrix[i, j]
-        logger.info(f"Found {len(high_corr)} feature pairs exceeding correlation threshold {threshold}")
-
-    return corr_matrix, high_corr
+    return corr_matrix
 
 #----------------------------------------
 
 def remove_correlated_features(
-    X: Union[pd.DataFrame, np.ndarray], high_corr: Dict[Tuple[int, int], float]
+    X: Union[pd.DataFrame, np.ndarray],
+    corr_matrix: np.ndarray,
+    threshold: float = 0.8,
 ) -> Tuple[Union[pd.DataFrame, np.ndarray], np.ndarray]:
     """
-    Removes correlated features from the feature matrix based on the high_corr dictionary.
-    For each correlated pair (i, j) with i < j, if feature i is maintained, feature j is dropped.
+    Removes correlated features from the feature matrix based on a correlation matrix (ndarray).
+
+    A feature j is dropped only if it is correlated with a feature i that is 
+    currently maintained in the dataset. If feature i was previously dropped, 
+    feature j is not dropped due to feature i, ensuring features are not unnecessarily 
+    removed if their correlated counterparts are no longer present.
 
     Parameters
     ----------
     X : pd.DataFrame or np.ndarray
         Matrix of features (samples x features).
-    high_corr : Dict[Tuple[int, int], float], optional
-        Dictionary mapping feature index pairs (i, j) to their correlation values.
-        If None, no features are removed.
+    corr_matrix : np.ndarray
+        Correlation matrix of shape (n_features, n_features).
+    threshold : float, default=0.8
+        Correlation threshold. Feature pairs with absolute correlation >= threshold
+        are identified as correlated pairs.
 
     Returns
     -------
@@ -88,12 +81,34 @@ def remove_correlated_features(
         - support : Boolean 1D NumPy array indicating which features were maintained (True) or dropped (False).
     """
     n_features = X.shape[1]
+    logger.info(f"Removing correlated features: initial n_features={n_features}, threshold={threshold}")
+
+    high_corr = {}
+    n_cols = corr_matrix.shape[0]
+    for i in range(n_cols):
+        for j in range(i + 1, n_cols):
+            val = max(abs(corr_matrix[i, j]), abs(corr_matrix[j, i]))
+            if val >= threshold:
+                high_corr[(i, j)] = float(
+                    corr_matrix[i, j]
+                    if abs(corr_matrix[i, j]) >= abs(corr_matrix[j, i])
+                    else corr_matrix[j, i]
+                )
+
+    # Normalize pair ordering so (i, j) always has i < j
+    corr_pairs = set()
+    for (a, b) in high_corr.keys():
+        if a != b:
+            corr_pairs.add((min(a, b), max(a, b)))
+
+    logger.info(f"Found {len(corr_pairs)} correlated feature pairs with correlation >= {threshold}")
+
     support = np.ones(n_features, dtype=bool)
 
     for i in range(n_features):
         if support[i]:
             for j in range(i + 1, n_features):
-                if (i, j) in high_corr or (j, i) in high_corr:
+                if (i, j) in corr_pairs:
                     support[j] = False
 
     if isinstance(X, pd.DataFrame):
@@ -105,3 +120,20 @@ def remove_correlated_features(
     logger.info(f"Removed correlated features: dropped {dropped_count}/{n_features} features, remaining={X_filtered.shape[1]}")
 
     return X_filtered, support
+
+#--------------------------------------------------------------------------------
+
+if __name__ == '__main__':
+
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(logging.StreamHandler())
+    
+    X = np.random.rand(4, 4)
+    corr = np.array([[1, 0.78, 0.5, 0.3], [0, 1, 0.8, 0.1], [0, 0, 1, 0.5], [0, 0, 0, 1]])
+    print(X)
+    X_filtered, support = remove_correlated_features(X, corr, threshold=0.7)
+    print(X_filtered)
+    print(support)
+
+    
+    
