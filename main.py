@@ -1,3 +1,10 @@
+"""
+Module: 			main.py
+Project: 			ML_DL_Exam
+Author: 			Calogero Forte
+Revision: 		    1.4
+Last modify date: 	09/06/2026
+"""
 
 import logging
 # pyrefly: ignore [missing-import]
@@ -72,7 +79,7 @@ rf.cross_evaluate( X_train_i=X_train_std, y_train_i=handler.get_train_set()[1] )
 
 # Predict
 logger.info("Running prediction on test set...")
-rf.predict(X_test_std, handler.get_test_set()[1])
+rf.predict(X_test_i=X_test_std, y_true_i=handler.get_test_set()[1])
 
 # Evaluation
 logger.info("Evaluating Random Forest performance...")

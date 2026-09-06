@@ -1,3 +1,11 @@
+"""
+Module: 			dataset_handler.py
+Project: 			ML_DL_Exam
+Author: 			Calogero Forte
+Revision: 		    1.0
+Last modify date: 	09/06/2026
+"""
+
 from pandas._libs import indexing
 from pandas._libs import indexing
 import logging

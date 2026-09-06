@@ -1,4 +1,10 @@
 """
+Module: 			base_classifier.py
+Project: 			ML_DL_Exam
+Author: 			Calogero Forte
+Revision: 		    1.4
+Last modify date: 	09/06/2026
+
 Base class for all classifiers.
 """
 
@@ -6,19 +12,20 @@ Base class for all classifiers.
 # Import
 #------------------------------
 
+from abc import abstractmethod, ABC
 import logging
 from typing import Optional, Any, Dict, List
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 
 logger = logging.getLogger(__name__)
 
+
 #------------------------------
 # Classes
 #------------------------------
-class BaseClassifier:
+class BaseClassifier(ABC):
     
     def __init__(self) -> None:
         """
@@ -32,27 +39,29 @@ class BaseClassifier:
         -------
         None
         """
-
         # Classifier instance
         self._classifier: Any = None
 
-        # Parameter grid fro cross validation
+        # Parameter grid for cross validation
         self._param_grid: Dict[str, List] = {}
         
         # Best parameters, score and estimator
         self._best_params: Dict[str, Any] = {}
-        self._best_score: float = None
+        self._best_score: Optional[float] = None
         self._best_estimator: Any = None
 
+        # Store true labels when calling predict
+        self._y_true: Optional[np.ndarray] = None
+
         # Store predictions, metrics and confusion matrix
-        self._y_pred: np.ndarray = None
-        self._accuracy : float = None
-        self._classification_report : str = None
-        self._confusion_matrix: np.ndarray = None
+        self._y_pred: Optional[np.ndarray] = None
+        self._accuracy: Optional[float] = None
+        self._classification_report: Optional[str] = None
+        self._confusion_matrix: Optional[np.ndarray] = None
 
     #----------------------------------------
 
-    def get_predictions(self) -> Optional[np.ndarray | None]:
+    def get_predictions(self) -> Optional[np.ndarray]:
         """
         Get the predictions
 
@@ -63,13 +72,14 @@ class BaseClassifier:
         Returns
         -------
         np.ndarray | None
-        The predictions if the classifier has been ran, None otherwise
+            The predictions if the classifier has been ran, None otherwise
         """
         return self._y_pred
 
     #----------------------------------------
 
-    def get_accuracy(self) -> Optional[float | None]:
+    @property
+    def accuracy(self) -> Optional[float]:
         """
         Get the accuracy
 
@@ -80,154 +90,137 @@ class BaseClassifier:
         Returns
         -------
         float | None
-        The accuracy if the classifier has been ran, None otherwise
+            The accuracy if the classifier has been ran, None otherwise
         """
+        if(self._y_pred is None):
+            logger.error("The classifier has not been ran yet.")
+            return
+        self._accuracy = accuracy_score(self._y_true, self._y_pred)
         return self._accuracy
-    
+
     #----------------------------------------
 
-    def get_classification_report(self) -> Optional[str | None]:
+    @property
+    def confusion_matrix(self) -> Optional[np.ndarray]:
         """
-        Get the classification report
-
-        Parameters
-        ----------
-        None
+        Get the confusion matrix
 
         Returns
         -------
-        str | None
-        The classification report if the classifier has been ran, None otherwise
+        Optional[np.ndarray]
+            The confusion matrix if the classifier has been ran, None otherwise
         """
+        if(self._y_pred is None):
+            logger.error("The classifier has not been ran yet.")
+            return
+        self._confusion_matrix = confusion_matrix(self._y_true, self._y_pred)
+        return self._confusion_matrix
+
+    #----------------------------------------
+
+    @property
+    def classification_report(self) -> Optional[str]:
+        """
+        Get the classification report
+
+        Returns
+        -------
+        Optional[str]
+            The classification report if the classifier has been ran, None otherwise
+        """
+        if(self._y_pred is None):
+            logger.error("The classifier has not been ran yet.")
+            return
+        self._classification_report = classification_report(self._y_true, self._y_pred)
         return self._classification_report
 
     #----------------------------------------
 
-    def get_confusion_matrix(self) -> Optional[np.ndarray | None]:
+    def train(self, X_train_i: np.ndarray | pd.DataFrame, y_train_i: np.ndarray | pd.Series, **kwargs) -> None:
         """
-        Get the confusion matrix
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        np.ndarray | None
-        The confusion matrix if the classifier has been ran, None otherwise
-        """
-        return self._confusion_matrix
-    
-    #----------------------------------------
-
-    def train(self, X_train_i: np.ndarray | pd.DataFrame, y_train_i: np.ndarray) -> None:
-        """
-        Train the base classifier
+        Train the base classifier. Works for both scikit-learn estimators and Keras models.
 
         Parameters
         ----------
         X_train_i : np.ndarray | pd.DataFrame
             The input features for training
-        y_train_i : np.ndarray
+        y_train_i : np.ndarray | pd.Series
             The target labels for training
-        
-        Returns
-        -------
-        None
+        **kwargs :
+            Additional arguments passed to fit (e.g. epochs, batch_size for Keras)
         """
-        logger.info(f"Training classifier on dataset shape: {X_train_i.shape}")
-        self._classifier.fit(X=X_train_i, y=y_train_i)
+        dataset_shape = getattr(X_train_i, "shape", len(X_train_i))
+        logger.info(f"Training classifier on dataset shape: {dataset_shape}")
+        
+        if isinstance(self._classifier, Model):
+            # Ensure model is compiled if it wasn't already
+            if not getattr(self._classifier, "compiled", True):
+                logger.error("Keras model not compiled. Compiling with default parameters.")
+                return
+            else:
+                self._classifier.fit(X_train_i, y_train_i, **kwargs)
+        else:
+            self._classifier.fit(X_train_i, y_train_i, **kwargs)
+
         logger.info("Classifier training completed.")
     
     #----------------------------------------
 
-    def predict(self, X_test_i: np.ndarray | pd.DataFrame, y_test_i: np.ndarray) -> np.ndarray:
+    def predict(self, X_test_i: np.ndarray, y_true_i: np.ndarray | pd.Series, **kwargs: Any) -> np.ndarray:
         """
-        Predict and return target labels for the input features.
-        The method use the base classifier of this instance or, the best one if 
-        the grid search has been performed.
-        Store internally the predictions, the metrics and the confuction matrix
-        
+        Predict and return target labels for input features.
+        Uses the base classifier or the best estimator if cross-evaluation has been performed.
+        Works for both scikit-learn estimators and Keras models.
+        Stores predictions, classification report, accuracy, and confusion matrix internally.
+
         Parameters
         ----------
         X_test_i : np.ndarray | pd.DataFrame
             The input features for prediction
-        y_test_i : np.ndarray
+        y_true_i : np.ndarray | pd.Series
             The target labels for prediction
-        
+        **kwargs :
+            Additional arguments passed to predict (e.g. batch_size for Keras)
+
         Returns
         -------
         np.ndarray
             The predicted target labels
         """
+        self._y_true = y_true_i
+        estimator = self._best_estimator if self._best_estimator is not None else self._classifier
 
-        if(self._best_estimator == None):
-            self._y_pred = self.rf.predict(X=X_test_i)
-        else:
-            self._y_pred = self._best_estimator.predict(X=X_test_i)
-        
-        self._classification_report = classification_report(y_true=y_test_i, y_pred=self._y_pred)
-        self._accuracy = accuracy_score(y_true=y_test_i, y_pred=self._y_pred)
-        self._confusion_matrix = confusion_matrix(y_true=y_test_i, y_pred=self._y_pred)
-
-        logger.info(f"Prediction completed on {len(self._y_pred)} test samples with accuracy: {self._accuracy:.4f}")
-        return self._y_pred
+        return estimator.predict(X_test_i, **kwargs)
 
     #----------------------------------------
 
     def set_param_grid(self, param_grid_i: Dict[str, List]) -> None:
         """
         Set the parameter grid
-
-        Parameters
-        ----------
-        param_grid_i : Dict[str, List]
-            The parameter grid
-
-        Returns
-        -------
-        None
         """
         self._param_grid = param_grid_i
         logger.info(f"Parameter grid configured with keys: {list(param_grid_i.keys())}")
 
     #----------------------------------------
 
-    def cross_evaluate(self, X_train_i: np.ndarray | pd.DataFrame, y_train_i: np.ndarray, cv_i: int = 5) -> None:
+    @abstractmethod
+    def cross_evaluate(self, X_train_i: np.ndarray | pd.DataFrame, y_train_i: np.ndarray | pd.Series, cv_i: int = 5, **kwargs) -> None:
         """
-        Cross-evaluate the classifier
-        
+        Cross-evaluate the classifier using scikit-learn GridSearchCV or K-Fold for Keras models.
+
         Parameters
         ----------
-        X_i : np.ndarray | pd.DataFrame
+        X_train_i : np.ndarray | pd.DataFrame
             The input features for cross-evaluation
-        y_i : np.ndarray
+        y_train_i : np.ndarray | pd.Series
             The target labels for cross-evaluation
         cv_i : int, default=5
             The number of folds for cross-evaluation
-        
+
         Returns
         -------
         None
         """
+        pass
 
-        logger.info(f"Starting cross-validation ({cv_i} folds) on dataset shape {X_train_i.shape}...")
-        grid = GridSearchCV(
-            self._classifier,
-            self._param_grid,
-            cv=cv_i,
-            scoring='accuracy',
-            n_jobs=-1
-        )
-
-        grid.fit(X_train_i, y_train_i)
-
-        self._best_params = grid.best_params_
-        self._best_score = grid.best_score_
-        self._best_estimator = grid.best_estimator_
         
-        logger.info(f"Cross-evaluation completed. Best score: {self._best_score:.4f}")
-        logger.info(f"Best parameters: {self._best_params}")
-        
-    
-    

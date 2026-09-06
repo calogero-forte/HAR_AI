@@ -1,18 +1,23 @@
 """
-This module contains utilities to plot several types of graphs.
+Module: 			plot_utilities.py
+Project: 			ML_DL_Exam
+Author: 			Calogero Forte
+Revision: 		    1.3
+Last modify date: 	09/06/2026
 """
 
-from typing import Optional
+from typing import Optional, Union
 import logging
 import math
 from typing import Any
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 logger = logging.getLogger(__name__)
 
-########################################
+#----------------------------------------
 
 def plot_xy_series(
     x_i: np.ndarray,
@@ -59,7 +64,7 @@ def plot_xy_series(
     ax.plot(x_i, y_i, color="blue")
     plt.show()
 
-########################################
+#----------------------------------------
 
 def plot_heatmap(
     data_i: np.ndarray,
@@ -103,7 +108,7 @@ def plot_heatmap(
     plt.tight_layout()
     plt.show()
 
-########################################
+#----------------------------------------
 
 def plot_scatter(
   data_i: np.ndarray,
@@ -164,7 +169,7 @@ def plot_scatter(
     plt.show()
 
 
-########################################
+#----------------------------------------
 
 def plot_scatter_3d(
   data_i: np.ndarray,
@@ -230,7 +235,7 @@ def plot_scatter_3d(
     plt.tight_layout()
     plt.show()
 
-########################################
+#----------------------------------------
 
 def plot_series(
     data_i: list[np.array],
@@ -275,6 +280,47 @@ def plot_series(
     else:
         for idx, data in enumerate(data_i):
             ax.plot( range(len(data)), data)
+
+    plt.tight_layout()
+    plt.show()
+
+#----------------------------------------
+
+def plot_histogram(
+    data_i: Union[pd.Series, np.ndarray],
+    bins_i: int = 20,
+    title_i: str = 'Histogram',
+    xlabel_i: str = 'bins',
+    ylabel_i: str = 'counts'
+) -> None:
+    """
+    Plot a histogram of the data_i.
+
+    Parameters
+    ----------
+    data_i : Union[pd.Series, np.ndarray]
+        data to plot
+    bins_i : int
+        number of bins to use. Default is 20
+    title_i : str
+        title of the plot. Default is 'Histogram'
+    xlabel_i : str
+        label of the x-axis. Default is 'xlabel'
+    ylabel_i : str
+        label of the y-axis. Default is 'ylabel'
+    Return
+    ------
+    None
+    """
+
+    logger.info(f"Generating histogram plot: '{title_i}' for data shape: {np.shape(data_i)}")
+
+    plt.figure(figsize=[6, 4.5], dpi=300)
+    plt.xlabel(xlabel_i)
+    plt.ylabel(ylabel_i)
+    plt.title(title_i)
+
+    plt.hist(data_i, bins=bins_i)
 
     plt.tight_layout()
     plt.show()

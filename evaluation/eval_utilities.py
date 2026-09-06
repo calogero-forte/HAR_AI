@@ -1,5 +1,9 @@
 """
-This module contains functions to evaluate the performance of a classification model.
+Module: 			eval_utilities.py
+Project: 			ML_DL_Exam
+Author: 			Calogero Forte
+Revision: 		    1.0
+Last modify date: 	09/06/2026
 """
 
 #------------------------------
@@ -7,7 +11,9 @@ This module contains functions to evaluate the performance of a classification m
 #------------------------------
 
 import logging
+# pyrefly: ignore [missing-import]
 from utils.plot_utilities import plot_heatmap
+# pyrefly: ignore [missing-import]
 from classification.base_classifier import BaseClassifier
 
 logger = logging.getLogger(__name__)
@@ -25,11 +31,8 @@ def print_classification_report(classifier_i: BaseClassifier) -> None:
     -------
     None
     """
-    if classifier_i._classification_report is not None:
-        print(classifier_i._classification_report)
-    else:
-        logger.warning("No classification report available to display.")
-        print("No classification report available.")
+
+    print(classifier_i.classification_report)
 
 #----------------------------------------
 
@@ -41,12 +44,9 @@ def print_accuracy(classifier_i: BaseClassifier) -> None:
     -------
     None
     """
-    if classifier_i._accuracy is not None:
-        print('Accuracy: %.4f' % classifier_i._accuracy)
-    else:
-        logger.warning("No accuracy score available to display.")
-        print("No accuracy available.")
 
+    print('Accuracy: %.4f' % classifier_i.accuracy)
+   
 #----------------------------------------
 
 def plot_confution_matrix(classifier_i: BaseClassifier) -> None:
@@ -57,11 +57,9 @@ def plot_confution_matrix(classifier_i: BaseClassifier) -> None:
     -------
     None
     """
-    if classifier_i._confusion_matrix is not None:
-        plot_heatmap(classifier_i._confusion_matrix, title_i='Confusion Matrix', xlabel_i='Predicted Label', ylabel_i='True Label')
-    else:
-        logger.warning("No confusion matrix available to plot.")
-        
+
+    plot_heatmap(classifier_i.confusion_matrix, title_i='Confusion Matrix', xlabel_i='Predicted Label', ylabel_i='True Label')
+
     
     
     
