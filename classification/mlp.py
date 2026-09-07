@@ -2,21 +2,18 @@
 Module: 			mlp.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.4
-Last modify date: 	09/06/2026
+Revision: 		    1.5
+Last modify date: 	09/07/2026
 """
 
-#------------------------------
-# Import
-#------------------------------
-import tempfile
+import logging
 from typing import Optional, List
-from keras import Sequential
-from keras.layers import Dense
+from keras.models import Sequential
+from keras.layers import Input, Dense, BatchNormalization
+from keras.regularizers import L2, Regularizer
+from keras.optimizers import Adam
 import numpy as np
 from sklearn.model_selection import KFold
-from keras.models import Model, clone_model
-from keras.losses import Loss
 import pandas as pd
 import keras_tuner as kt
 
@@ -71,6 +68,7 @@ class MLP(BaseClassifier):
         hidden_activation_i: Optional[List[str]] = None, output_activation_i: Optional[str] = None) -> None:
         
         super().__init__()
+        logger.info("Initializing MLP classifier...")
         self._classifier = Sequential(name='MLP_Network')
         if hidden_layers_i is not None:
             self.add_hidden_layers(hidden_layers_i, hidden_activation_i)
@@ -98,6 +96,7 @@ class MLP(BaseClassifier):
         if hidden_activation_i is None:
             hidden_activation_i = ['relu'] * len(hidden_layers_i)
         
+        logger.info(f"Adding {len(hidden_layers_i)} hidden layer(s) with units {hidden_layers_i} and activations {hidden_activation_i}")
         for i in range(len(hidden_layers_i)):
             self._classifier.add(
                 Dense(
@@ -128,6 +127,7 @@ class MLP(BaseClassifier):
         if output_activation_i is None:
             output_activation_i = 'softmax'
         
+        logger.info(f"Adding output layer with {output_units_i} units and activation '{output_activation_i}'")
         self._classifier.add(
             Dense(
                 units=output_units_i,
@@ -155,6 +155,7 @@ class MLP(BaseClassifier):
         ------
         None
         """
+        logger.info(f"Compiling MLP model (optimizer='{optimizer_i}', loss='{loss_i}', metrics={metrics_i})")
         self._classifier.compile(
             optimizer=optimizer_i,
             loss=loss_i,
@@ -175,6 +176,7 @@ class MLP(BaseClassifier):
         ------
         None
         """
+        logger.info("Displaying MLP model summary:")
         self._classifier.summary()
 
     #----------------------------------------
@@ -183,8 +185,11 @@ class MLP(BaseClassifier):
         """
         Override of the base predict method
         """
+        dataset_shape = getattr(X_test_i, "shape", len(X_test_i))
+        logger.info(f"Running MLP prediction on test dataset shape: {dataset_shape}")
         y_pred_tmp = super().predict(X_test_i, y_true_i, **kwargs)
         self._y_pred = MLP._probailities_to_target(y_pred_tmp)
+        logger.info(f"Prediction completed. Generated predictions for {len(self._y_pred)} samples.")
         return self._y_pred
 
     #----------------------------------------
@@ -215,80 +220,103 @@ class MLP(BaseClassifier):
         """
         Override of the base cross_evaluate method
         """
-        X = np.asarray(X_train_i)
-        y = np.asarray(y_train_i)
-
         if not self._param_grid:
-            logger.error("No parameter grid specified")
+            logger.error("No parameter grid specified for cross-evaluation.")
             return
 
-        hp = kt.HyperParameters()
-        param_mapping = {}
+        dataset_shape = getattr(X_train_i, "shape", len(X_train_i))
+        logger.info(f"Starting MLP cross-evaluation on dataset shape {dataset_shape}...")
+        logger.info(f"Parameter grid configured with keys: {list(self._param_grid.keys())}")
 
-        for param_name, param_values in self._param_grid.items():
-            if all(isinstance(v, (int, float, str, bool)) for v in param_values):
-                hp.Choice(param_name, values=param_values)
-            else:
-                str_vals = [str(v) for v in param_values]
-                param_mapping[param_name] = dict(zip(str_vals, param_values))
-                hp.Choice(param_name, values=str_vals)
+        # Get the hyperparameters
+        p_layers = self._param_grid.get("hidden_layers", [1])
+        p_units = self._param_grid.get("units", [8])
+        if "Units_per_layer" in self._param_grid:
+            p_units = self._param_grid.get("Units_per_layer")
+        p_learning_rate = self._param_grid.get("learning_rate", [0.001])
+        p_batch_size = self._param_grid.get("batch_size", [32])
+        p_epochs = self._param_grid.get("epochs", [10])
+        p_kernel_regularizer = self._param_grid.get("kernel_regularizer", [None])
+        p_bias_regularizer = self._param_grid.get("bias_regularizer", [None])
 
-        opt_name = getattr(getattr(self._classifier, "optimizer", None), "name", "adam")
-        loss_fn = getattr(self._classifier, "loss", "sparse_categorical_crossentropy")
+        results = []
+        best_val_acc = -1.0
 
-        def build_model(hp_trial):
-            if "optimizer" in hp_trial:
-                opt = hp_trial.get("optimizer")
-            else:
-                opt = opt_name if isinstance(opt_name, str) else "adam"
+        input_dim = X_train_i.shape[1] if hasattr(X_train_i, "shape") else len(X_train_i[0])
+        output_dim = len(np.unique(y_train_i))
 
-            if "loss" in hp_trial:
-                loss = hp_trial.get("loss")
-            else:
-                loss = loss_fn if isinstance(loss_fn, (str, Loss)) else "sparse_categorical_crossentropy"
+        trial_idx = 0
+        for batch_size in p_batch_size:
+            for epochs in p_epochs:
+                for learning_rate in p_learning_rate:
+                    for kernel_regularizer in p_kernel_regularizer:
+                        for bias_regularizer in p_bias_regularizer:
+                            for units in p_units:
+                                for layers in p_layers:
+                                    trial_idx += 1
+                                    logger.info(
+                                        f"[Trial {trial_idx}] Configuration: hidden_layers={layers}, units={units}, "
+                                        f"learning_rate={learning_rate}, kernel_regularizer={kernel_regularizer}, "
+                                        f"bias_regularizer={bias_regularizer}, batch_size={batch_size}, epochs={epochs}"
+                                    )
 
-            try:
-                model = clone_model(self._classifier)
-                model.compile(optimizer=opt, loss=loss, metrics=["accuracy"])
-            except Exception:
-                model = self._classifier
-                model.compile(optimizer=opt, loss=loss, metrics=["accuracy"])
-            return model
+                                    mlp = Sequential(name=f"MLP_Trial_{trial_idx}")
+                                    mlp.add(Input(shape=(input_dim,)))
+                                    for _ in range(layers):
+                                        mlp.add(Dense(
+                                            units=units,
+                                            activation="relu",
+                                            kernel_regularizer=kernel_regularizer,
+                                            bias_regularizer=bias_regularizer
+                                        ))
+                                    mlp.add(Dense(units=output_dim, activation="softmax"))
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tuner = KFoldGridSearch(
-                cv=cv_i,
-                hypermodel=build_model,
-                hyperparameters=hp,
-                objective=kt.Objective("val_accuracy", direction="max"),
-                directory=tmp_dir,
-                project_name="mlp_grid_search",
-                overwrite=True,
-            )
+                                    mlp.compile(
+                                        optimizer=Adam(learning_rate=learning_rate),
+                                        loss="sparse_categorical_crossentropy",
+                                        metrics=["accuracy"]
+                                    )
 
-            tuner.search(X, y, verbose=kwargs.get("verbose", 0))
+                                    logger.info(f"[Trial {trial_idx}] Fitting model (batch_size={batch_size}, epochs={epochs})...")
+                                    res = mlp.fit(X_train_i, y_train_i, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
-            best_trials = tuner.oracle.get_best_trials(1)
-            if best_trials:
-                best_trial = best_trials[0]
-                self._best_score = float(best_trial.score)
-                best_hps = best_trial.hyperparameters.values
-                resolved_best_params = {}
-                for k, v in best_hps.items():
-                    if k in param_mapping and str(v) in param_mapping[k]:
-                        resolved_best_params[k] = param_mapping[k][str(v)]
-                    else:
-                        resolved_best_params[k] = v
-                self._best_params = resolved_best_params
+                                    val_acc = res.history['val_accuracy'][-1]
+                                    train_acc = res.history['accuracy'][-1]
+                                    val_loss = res.history['val_loss'][-1]
+                                    train_loss = res.history['loss'][-1]
 
-                best_hp_obj = tuner.get_best_hyperparameters(1)[0]
-                self._best_estimator = tuner.hypermodel.build(best_hp_obj)
-            else:
-                self._best_score = None
-                self._best_params = {}
-                self._best_estimator = self._classifier
+                                    logger.info(
+                                        f"[Trial {trial_idx}] Completed - Train Accuracy: {train_acc:.4f}, "
+                                        f"Val Accuracy: {val_acc:.4f}, Val Loss: {val_loss:.4f}"
+                                    )
 
-            final_epochs = self._best_params.get("epochs", kwargs.get("epochs", 10))
-            final_batch_size = self._best_params.get("batch_size", kwargs.get("batch_size", 32))
-            self._best_estimator.fit(X, y, epochs=final_epochs, batch_size=final_batch_size, verbose=kwargs.get("verbose", 0))
+                                    trial_result = {
+                                        "hidden_layers": layers,
+                                        "units": units,
+                                        "batch_size": batch_size,
+                                        "epochs": epochs,
+                                        "learning_rate": learning_rate,
+                                        "kernel_regularizer": kernel_regularizer,
+                                        "bias_regularizer": bias_regularizer,
+                                        "accuracy": train_acc,
+                                        "val_accuracy": val_acc,
+                                        "loss": train_loss,
+                                        "val_loss": val_loss,
+                                    }
+                                    results.append(trial_result)
+
+                                    if val_acc > best_val_acc:
+                                        best_val_acc = val_acc
+                                        self._best_score = float(val_acc)
+                                        self._best_params = trial_result
+                                        self._best_estimator = mlp
+
+        logger.info(f"MLP cross-evaluation completed. Evaluated {len(results)} configurations.")
+        logger.info(f"Best validation score: {self._best_score:.4f}" if self._best_score is not None else "Best validation score: N/A")
+        logger.info(f"Best parameters: {self._best_params}")
+
+                
+                        
+
+        
 
