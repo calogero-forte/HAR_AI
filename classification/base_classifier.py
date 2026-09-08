@@ -2,8 +2,8 @@
 Module: 			base_classifier.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.4
-Last modify date: 	09/06/2026
+Revision: 		    1.6
+Last modify date: 	09/08/2026
 
 Base class for all classifiers.
 """
@@ -18,6 +18,7 @@ from typing import Optional, Any, Dict, List
 import numpy as np
 import pandas as pd
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from keras.models import Model
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,14 @@ class BaseClassifier(ABC):
 
     #----------------------------------------
 
-    def train(self, X_train_i: np.ndarray | pd.DataFrame, y_train_i: np.ndarray | pd.Series, **kwargs) -> None:
+    def train(
+        self,
+        X_train_i: np.ndarray | pd.DataFrame,
+        y_train_i: np.ndarray | pd.Series,
+        X_val_i: Optional[np.ndarray | pd.DataFrame] = None,
+        y_val_i: Optional[np.ndarray | pd.Series] = None,
+        **kwargs: Any
+    ) -> None:
         """
         Train the base classifier. Works for both scikit-learn estimators and Keras models.
 
@@ -146,21 +154,31 @@ class BaseClassifier(ABC):
             The input features for training
         y_train_i : np.ndarray | pd.Series
             The target labels for training
+        X_val_i : np.ndarray | pd.DataFrame, optional
+            The input features for validation (used if model is a Keras model), default=None
+        y_val_i : np.ndarray | pd.Series, optional
+            The target labels for validation (used if model is a Keras model), default=None
         **kwargs :
             Additional arguments passed to fit (e.g. epochs, batch_size for Keras)
         """
         dataset_shape = getattr(X_train_i, "shape", len(X_train_i))
         logger.info(f"Training classifier on dataset shape: {dataset_shape}")
         
+        fit_kwargs = dict(kwargs)
+
         if isinstance(self._classifier, Model):
-            # Ensure model is compiled if it wasn't already
-            if not getattr(self._classifier, "compiled", True):
-                logger.error("Keras model not compiled. Compiling with default parameters.")
-                return
+            if X_val_i is not None and y_val_i is not None:
+                val_shape = getattr(X_val_i, "shape", len(X_val_i))
+                logger.info(f"Training Keras model with validation set shape: {val_shape}")
+                fit_kwargs["validation_data"] = (X_val_i, y_val_i)
             else:
-                self._classifier.fit(X_train_i, y_train_i, **kwargs)
+                logger.info("Training Keras model without validation set.")
+
+            self._classifier.fit(X_train_i, y_train_i, **fit_kwargs)
         else:
-            self._classifier.fit(X_train_i, y_train_i, **kwargs)
+            if X_val_i is not None or y_val_i is not None:
+                logger.info("Validation set provided but model is not a Keras model; ignoring validation set.")
+            self._classifier.fit(X_train_i, y_train_i, **fit_kwargs)
 
         logger.info("Classifier training completed.")
     
@@ -204,7 +222,15 @@ class BaseClassifier(ABC):
     #----------------------------------------
 
     @abstractmethod
-    def cross_evaluate(self, X_train_i: np.ndarray | pd.DataFrame, y_train_i: np.ndarray | pd.Series, cv_i: int = 5, **kwargs) -> None:
+    def cross_evaluate(
+        self,
+        X_train_i: np.ndarray | pd.DataFrame,
+        y_train_i: np.ndarray | pd.Series,
+        X_val_i: Optional[np.ndarray | pd.DataFrame] = None,
+        y_val_i: Optional[np.ndarray | pd.Series] = None,
+        cv_i: int = 5,
+        **kwargs
+    ) -> None:
         """
         Cross-evaluate the classifier using scikit-learn GridSearchCV or K-Fold for Keras models.
 
@@ -214,6 +240,10 @@ class BaseClassifier(ABC):
             The input features for cross-evaluation
         y_train_i : np.ndarray | pd.Series
             The target labels for cross-evaluation
+        X_val_i : np.ndarray | pd.DataFrame, optional
+            The input features for validation (if applicable), default=None
+        y_val_i : np.ndarray | pd.Series, optional
+            The target labels for validation (if applicable), default=None
         cv_i : int, default=5
             The number of folds for cross-evaluation
 

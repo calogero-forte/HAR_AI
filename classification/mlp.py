@@ -2,8 +2,8 @@
 Module: 			mlp.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.5
-Last modify date: 	09/07/2026
+Revision: 		    1.6
+Last modify date: 	09/08/2026
 """
 
 import logging
@@ -216,16 +216,37 @@ class MLP(BaseClassifier):
 
     #----------------------------------------
 
-    def cross_evaluate(self, X_train_i: np.ndarray | pd.DataFrame, y_train_i: np.ndarray | pd.Series, cv_i: int = 5, **kwargs) -> None:
+    def cross_evaluate(
+        self,
+        X_train_i: np.ndarray | pd.DataFrame,
+        y_train_i: np.ndarray | pd.Series,
+        X_val_i: np.ndarray | pd.DataFrame,
+        y_val_i: np.ndarray | pd.Series,
+        **kwargs
+    ) -> None:
         """
-        Override of the base cross_evaluate method
+        Override of the base cross_evaluate method for MLP.
+
+        Parameters
+        ----------
+        X_train_i : np.ndarray | pd.DataFrame
+            The input features for training
+        y_train_i : np.ndarray | pd.Series
+            The target labels for training
+        X_val_i : np.ndarray | pd.DataFrame
+            The input features for validation
+        y_val_i : np.ndarray | pd.Series
+            The target labels for validation
+        **kwargs :
+            Additional keyword arguments
         """
         if not self._param_grid:
             logger.error("No parameter grid specified for cross-evaluation.")
             return
 
         dataset_shape = getattr(X_train_i, "shape", len(X_train_i))
-        logger.info(f"Starting MLP cross-evaluation on dataset shape {dataset_shape}...")
+        val_shape = getattr(X_val_i, "shape", len(X_val_i))
+        logger.info(f"Starting MLP cross-evaluation on dataset shape {dataset_shape} with validation shape {val_shape}...")
         logger.info(f"Parameter grid configured with keys: {list(self._param_grid.keys())}")
 
         # Get the hyperparameters
@@ -278,7 +299,7 @@ class MLP(BaseClassifier):
                                     )
 
                                     logger.info(f"[Trial {trial_idx}] Fitting model (batch_size={batch_size}, epochs={epochs})...")
-                                    res = mlp.fit(X_train_i, y_train_i, batch_size=batch_size, epochs=epochs, validation_split=0.2)
+                                    res = mlp.fit(X_train_i, y_train_i, batch_size=batch_size, epochs=epochs, validation_data=(X_val_i, y_val_i))
 
                                     val_acc = res.history['val_accuracy'][-1]
                                     train_acc = res.history['accuracy'][-1]

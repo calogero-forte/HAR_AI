@@ -2,8 +2,8 @@
 Module: 			random_forest.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.4
-Last modify date: 	09/06/2026
+Revision: 		    1.6
+Last modify date: 	09/08/2026
 """
 
 #------------------------------
@@ -79,10 +79,22 @@ class RandomForest(BaseClassifier):
 
     #----------------------------------------
 
-    def cross_evaluate(self, X_train_i: np.ndarray | pd.DataFrame, y_train_i: np.ndarray | pd.Series, cv_i: int = 5, **kwargs) -> None:
+    def cross_evaluate(
+        self,
+        X_train_i: np.ndarray | pd.DataFrame,
+        y_train_i: np.ndarray | pd.Series,
+        X_val_i: Optional[np.ndarray | pd.DataFrame] = None,
+        y_val_i: Optional[np.ndarray | pd.Series] = None,
+        cv_i: int = 5,
+        **kwargs
+    ) -> None:
         """
-        Override of the base cross_evaluate method
+        Override of the base cross_evaluate method for RandomForest.
+        Validation set parameters (X_val_i, y_val_i) are optional and not used by RandomForest cross-evaluation.
         """
+        if X_val_i is not None or y_val_i is not None:
+            logger.info("Validation set provided but not used in RandomForest cross-evaluation.")
+
         dataset_shape = getattr(X_train_i, "shape", len(X_train_i))
         logger.info(f"Starting cross-validation ({cv_i} folds) on dataset shape {dataset_shape}...")
         grid = GridSearchCV(
