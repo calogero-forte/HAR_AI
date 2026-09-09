@@ -2,16 +2,19 @@
 Module: 			mlp.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.6
-Last modify date: 	09/08/2026
+Revision: 		    1.8
+Last modify date: 	09/09/2026
 """
 
 import logging
-from typing import Optional, List
+import json
+from typing import Optional, List, Dict
+from tensorflow.config.experimental import enable_op_determinism
 from keras.models import Sequential
 from keras.layers import Input, Dense, BatchNormalization
-from keras.regularizers import L2, Regularizer
+from keras.regularizers import L1, L2
 from keras.optimizers import Adam
+from keras.utils import set_random_seed
 import numpy as np
 from sklearn.model_selection import KFold
 import pandas as pd
@@ -74,6 +77,14 @@ class MLP(BaseClassifier):
             self.add_hidden_layers(hidden_layers_i, hidden_activation_i)
         if output_units_i is not None:
             self.add_output_layer(output_units_i, output_activation_i)
+
+        # Store the history of the best trial
+        self._best_train_history: Optional[Dict[str, List[float]]] = None
+
+        # Experiment reproducibility
+        set_random_seed(42)
+        enable_op_determinism()
+
 
     #----------------------------------------
     
@@ -194,6 +205,52 @@ class MLP(BaseClassifier):
 
     #----------------------------------------
 
+    def best_history_to_json(self, json_path_i: str) -> None:
+        """
+        Save the history of the best trial to a JSON file
+
+        Parameters
+        ----------
+        json_path_i : str
+            The path to the JSON file
+
+        Return
+        ------
+        None
+        """
+        logger.info(f"Saving the history of the best trial to {json_path_i}...")
+        if self._best_train_history is None:
+            logger.error("No best trial history found.")
+            return
+        with open(json_path_i, "w") as f:
+            json.dump(self._best_train_history, f)
+        logger.info("Best trial history saved successfully.")
+
+    #----------------------------------------
+
+    @staticmethod
+    def best_history_from_json(json_path_i: str) -> Dict[str, List[float]]:
+        """
+        Load the history of the best trial from a JSON file
+
+        Parameters
+        ----------
+        json_path_i : str
+            The path to the JSON file
+
+        Return
+        ------
+        Dict[str, List[float]]
+            The history of the best trial
+        """
+        logger.info(f"Loading the history of the best trial from {json_path_i}...")
+        with open(json_path_i, "r") as f:
+            best_train_history_i = json.load(f)
+        logger.info("Best trial history loaded successfully.")
+        return best_train_history_i
+
+    #----------------------------------------
+
     @staticmethod
     def _probailities_to_target(probabilities_i: np.ndarray) -> np.ndarray:
         """
@@ -267,18 +324,30 @@ class MLP(BaseClassifier):
         output_dim = len(np.unique(y_train_i))
 
         trial_idx = 0
+        batch_size = 32
+        epochs = 10
+        learning_rate = 0.001
+        layers = 2
+        units = 8
         for batch_size in p_batch_size:
             for epochs in p_epochs:
                 for learning_rate in p_learning_rate:
                     for kernel_regularizer in p_kernel_regularizer:
                         for bias_regularizer in p_bias_regularizer:
-                            for units in p_units:
-                                for layers in p_layers:
+                            for layers in p_layers:
+                                for units in p_units:
+
                                     trial_idx += 1
+                                    kernel_regularizer_name = type(kernel_regularizer).__name__
+                                    kernel_regularizer_rate = kernel_regularizer.l1 if isinstance(kernel_regularizer, L1) else \
+                                        kernel_regularizer.l2 if isinstance(kernel_regularizer, L2) else None
+                                    bias_regularizer_name = type(bias_regularizer).__name__
+                                    bias_regularizer_rate = bias_regularizer.l1 if isinstance(bias_regularizer, L1) else \
+                                        bias_regularizer.l2 if isinstance(bias_regularizer, L2) else None
                                     logger.info(
                                         f"[Trial {trial_idx}] Configuration: hidden_layers={layers}, units={units}, "
-                                        f"learning_rate={learning_rate}, kernel_regularizer={kernel_regularizer}, "
-                                        f"bias_regularizer={bias_regularizer}, batch_size={batch_size}, epochs={epochs}"
+                                        f"learning_rate={learning_rate}, kernel_regularizer=({kernel_regularizer_name}, {kernel_regularizer_rate}), "
+                                        f"bias_regularizer=({bias_regularizer_name}, {bias_regularizer_rate}), batch_size={batch_size}, epochs={epochs}"
                                     )
 
                                     mlp = Sequential(name=f"MLP_Trial_{trial_idx}")
@@ -317,8 +386,8 @@ class MLP(BaseClassifier):
                                         "batch_size": batch_size,
                                         "epochs": epochs,
                                         "learning_rate": learning_rate,
-                                        "kernel_regularizer": kernel_regularizer,
-                                        "bias_regularizer": bias_regularizer,
+                                        "kernel_regularizer": f"({kernel_regularizer_name}, {kernel_regularizer_rate}) ", 
+                                        "bias_regularizer": f"({bias_regularizer_name}, {bias_regularizer_rate})",
                                         "accuracy": train_acc,
                                         "val_accuracy": val_acc,
                                         "loss": train_loss,
@@ -331,7 +400,11 @@ class MLP(BaseClassifier):
                                         self._best_score = float(val_acc)
                                         self._best_params = trial_result
                                         self._best_estimator = mlp
+                                        self._best_train_history = res.history
 
+                                    # Deleting the model
+                                    del mlp
+                                    
         logger.info(f"MLP cross-evaluation completed. Evaluated {len(results)} configurations.")
         logger.info(f"Best validation score: {self._best_score:.4f}" if self._best_score is not None else "Best validation score: N/A")
         logger.info(f"Best parameters: {self._best_params}")
