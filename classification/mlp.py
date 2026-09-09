@@ -2,7 +2,7 @@
 Module: 			mlp.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.8
+Revision: 		    1.9
 Last modify date: 	09/09/2026
 """
 
@@ -314,8 +314,7 @@ class MLP(BaseClassifier):
         p_learning_rate = self._param_grid.get("learning_rate", [0.001])
         p_batch_size = self._param_grid.get("batch_size", [32])
         p_epochs = self._param_grid.get("epochs", [10])
-        p_kernel_regularizer = self._param_grid.get("kernel_regularizer", [None])
-        p_bias_regularizer = self._param_grid.get("bias_regularizer", [None])
+        p_regularizer = self._param_grid.get("regularizer", [None])
 
         results = []
         best_val_acc = -1.0
@@ -323,87 +322,76 @@ class MLP(BaseClassifier):
         input_dim = X_train_i.shape[1] if hasattr(X_train_i, "shape") else len(X_train_i[0])
         output_dim = len(np.unique(y_train_i))
 
-        trial_idx = 0
-        batch_size = 32
-        epochs = 10
-        learning_rate = 0.001
-        layers = 2
-        units = 8
         for batch_size in p_batch_size:
             for epochs in p_epochs:
                 for learning_rate in p_learning_rate:
-                    for kernel_regularizer in p_kernel_regularizer:
-                        for bias_regularizer in p_bias_regularizer:
-                            for layers in p_layers:
-                                for units in p_units:
+                    for regularizer in p_regularizer:
+                        for layers in p_layers:
+                            for units in p_units:
 
-                                    trial_idx += 1
-                                    kernel_regularizer_name = type(kernel_regularizer).__name__
-                                    kernel_regularizer_rate = kernel_regularizer.l1 if isinstance(kernel_regularizer, L1) else \
-                                        kernel_regularizer.l2 if isinstance(kernel_regularizer, L2) else None
-                                    bias_regularizer_name = type(bias_regularizer).__name__
-                                    bias_regularizer_rate = bias_regularizer.l1 if isinstance(bias_regularizer, L1) else \
-                                        bias_regularizer.l2 if isinstance(bias_regularizer, L2) else None
-                                    logger.info(
-                                        f"[Trial {trial_idx}] Configuration: hidden_layers={layers}, units={units}, "
-                                        f"learning_rate={learning_rate}, kernel_regularizer=({kernel_regularizer_name}, {kernel_regularizer_rate}), "
-                                        f"bias_regularizer=({bias_regularizer_name}, {bias_regularizer_rate}), batch_size={batch_size}, epochs={epochs}"
-                                    )
+                                trial_idx += 1
+                                regularizer_name = type(regularizer).__name__
+                                regularizer_rate = regularizer.l1 if isinstance(regularizer, L1) else \
+                                    regularizer.l2 if isinstance(regularizer, L2) else None
+                                logger.info(
+                                    f"[Trial {trial_idx}] Configuration: hidden_layers={layers}, units={units}, "
+                                    f"learning_rate={learning_rate}, regularizer=({regularizer_name}, {regularizer_rate}), "
+                                    f"batch_size={batch_size}, epochs={epochs}"
+                                )
 
-                                    mlp = Sequential(name=f"MLP_Trial_{trial_idx}")
-                                    mlp.add(Input(shape=(input_dim,)))
-                                    for _ in range(layers):
-                                        mlp.add(Dense(
-                                            units=units,
-                                            activation="relu",
-                                            kernel_regularizer=kernel_regularizer,
-                                            bias_regularizer=bias_regularizer
-                                        ))
-                                    mlp.add(Dense(units=output_dim, activation="softmax"))
+                                mlp = Sequential(name=f"MLP_Trial_{trial_idx}")
+                                mlp.add(Input(shape=(input_dim,)))
+                                for _ in range(layers):
+                                    mlp.add(Dense(
+                                        units=units,
+                                        activation="relu",
+                                        kernel_regularizer=regularizer,
+                                        bias_regularizer=regularizer
+                                    ))
+                                mlp.add(Dense(units=output_dim, activation="softmax"))
 
-                                    mlp.compile(
-                                        optimizer=Adam(learning_rate=learning_rate),
-                                        loss="sparse_categorical_crossentropy",
-                                        metrics=["accuracy"]
-                                    )
+                                mlp.compile(
+                                    optimizer=Adam(learning_rate=learning_rate),
+                                    loss="sparse_categorical_crossentropy",
+                                    metrics=["accuracy"]
+                                )
 
-                                    logger.info(f"[Trial {trial_idx}] Fitting model (batch_size={batch_size}, epochs={epochs})...")
-                                    res = mlp.fit(X_train_i, y_train_i, batch_size=batch_size, epochs=epochs, validation_data=(X_val_i, y_val_i))
+                                logger.info(f"[Trial {trial_idx}] Fitting model (batch_size={batch_size}, epochs={epochs})...")
+                                res = mlp.fit(X_train_i, y_train_i, batch_size=batch_size, epochs=epochs, validation_data=(X_val_i, y_val_i))
 
-                                    val_acc = res.history['val_accuracy'][-1]
-                                    train_acc = res.history['accuracy'][-1]
-                                    val_loss = res.history['val_loss'][-1]
-                                    train_loss = res.history['loss'][-1]
+                                val_acc = res.history['val_accuracy'][-1]
+                                train_acc = res.history['accuracy'][-1]
+                                val_loss = res.history['val_loss'][-1]
+                                train_loss = res.history['loss'][-1]
 
-                                    logger.info(
-                                        f"[Trial {trial_idx}] Completed - Train Accuracy: {train_acc:.4f}, "
-                                        f"Val Accuracy: {val_acc:.4f}, Val Loss: {val_loss:.4f}"
-                                    )
+                                logger.info(
+                                    f"[Trial {trial_idx}] Completed - Train Accuracy: {train_acc:.4f}, "
+                                    f"Val Accuracy: {val_acc:.4f}, Val Loss: {val_loss:.4f}"
+                                )
 
-                                    trial_result = {
-                                        "hidden_layers": layers,
-                                        "units": units,
-                                        "batch_size": batch_size,
-                                        "epochs": epochs,
-                                        "learning_rate": learning_rate,
-                                        "kernel_regularizer": f"({kernel_regularizer_name}, {kernel_regularizer_rate}) ", 
-                                        "bias_regularizer": f"({bias_regularizer_name}, {bias_regularizer_rate})",
-                                        "accuracy": train_acc,
-                                        "val_accuracy": val_acc,
-                                        "loss": train_loss,
-                                        "val_loss": val_loss,
-                                    }
-                                    results.append(trial_result)
+                                trial_result = {
+                                    "hidden_layers": layers,
+                                    "units": units,
+                                    "batch_size": batch_size,
+                                    "epochs": epochs,
+                                    "learning_rate": learning_rate,
+                                    "regularizer": f"({regularizer_name}, {regularizer_rate}) ", 
+                                    "accuracy": train_acc,
+                                    "val_accuracy": val_acc,
+                                    "loss": train_loss,
+                                    "val_loss": val_loss,
+                                }
+                                results.append(trial_result)
 
-                                    if val_acc > best_val_acc:
-                                        best_val_acc = val_acc
-                                        self._best_score = float(val_acc)
-                                        self._best_params = trial_result
-                                        self._best_estimator = mlp
-                                        self._best_train_history = res.history
+                                if val_acc > best_val_acc:
+                                    best_val_acc = val_acc
+                                    self._best_score = float(val_acc)
+                                    self._best_params = trial_result
+                                    self._best_estimator = mlp
+                                    self._best_train_history = res.history
 
-                                    # Deleting the model
-                                    del mlp
+                                # Deleting the model
+                                del mlp
                                     
         logger.info(f"MLP cross-evaluation completed. Evaluated {len(results)} configurations.")
         logger.info(f"Best validation score: {self._best_score:.4f}" if self._best_score is not None else "Best validation score: N/A")
