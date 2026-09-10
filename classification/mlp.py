@@ -2,8 +2,8 @@
 Module: 			mlp.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.9
-Last modify date: 	09/09/2026
+Revision: 		    1.10
+Last modify date: 	09/10/2026
 """
 
 import logging
@@ -322,10 +322,11 @@ class MLP(BaseClassifier):
         input_dim = X_train_i.shape[1] if hasattr(X_train_i, "shape") else len(X_train_i[0])
         output_dim = len(np.unique(y_train_i))
 
-        for batch_size in p_batch_size:
-            for epochs in p_epochs:
-                for learning_rate in p_learning_rate:
-                    for regularizer in p_regularizer:
+        trial_idx = 0
+        for regularizer in p_regularizer:
+            for learning_rate in p_learning_rate:    
+                for epochs in p_epochs:
+                    for batch_size in p_batch_size:
                         for layers in p_layers:
                             for units in p_units:
 
