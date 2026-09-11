@@ -2,8 +2,8 @@
 Module: 			eval_utilities.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.0
-Last modify date: 	09/06/2026
+Revision: 		    1.12
+Last modify date: 	09/11/2026
 """
 
 #------------------------------

@@ -2,8 +2,8 @@
 Module: 			main.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.4
-Last modify date: 	09/06/2026
+Revision: 		    1.12
+Last modify date: 	09/11/2026
 """
 
 import logging

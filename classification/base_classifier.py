@@ -2,8 +2,8 @@
 Module: 			base_classifier.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.6
-Last modify date: 	09/08/2026
+Revision: 		    1.12
+Last modify date: 	09/11/2026
 
 Base class for all classifiers.
 """

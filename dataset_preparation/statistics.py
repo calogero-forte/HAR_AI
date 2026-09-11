@@ -2,8 +2,8 @@
 Module: 			statistics.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.3
-Last modify date: 	09/06/2026
+Revision: 		    1.12
+Last modify date: 	09/11/2026
 
 This module contains util functions to 
 compute statistcal metrics on Pandas DataFrames

@@ -2,7 +2,7 @@
 Module: 			random_forest.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.11
+Revision: 		    1.12
 Last modify date: 	09/11/2026
 """
 

@@ -2,8 +2,8 @@
 Module: 			mlp.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.10
-Last modify date: 	09/10/2026
+Revision: 		    1.12
+Last modify date: 	09/11/2026
 """
 
 import logging
