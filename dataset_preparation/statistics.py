@@ -16,6 +16,8 @@ import logging
 import pandas as pd
 import numpy as np
 from typing import List, Optional, Tuple, Dict, Union
+# pyrefly: ignore [missing-import]
+import global_variables
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +136,7 @@ if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
     logger.addHandler(logging.StreamHandler())
     
+    np.random.seed(global_variables.SEED)
     X = np.random.rand(4, 4)
     corr = np.array([[1, 0.78, 0.5, 0.3], [0, 1, 0.8, 0.1], [0, 0, 1, 0.5], [0, 0, 0, 1]])
     print(X)

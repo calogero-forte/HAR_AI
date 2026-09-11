@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+# pyrefly: ignore [missing-import]
+import global_variables
 
 logger = logging.getLogger(__name__)
 
@@ -329,6 +331,7 @@ def plot_histogram(
 
 if __name__ == '__main__':
 
+    np.random.seed(global_variables.SEED)
     f = 10
     fs = 1000
     t = np.linspace(0, 1, int( 1 * fs ) )

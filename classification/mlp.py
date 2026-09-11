@@ -19,7 +19,8 @@ import numpy as np
 from sklearn.model_selection import KFold
 import pandas as pd
 import keras_tuner as kt
-
+# pyrefly: ignore [missing-import]
+import global_variables
 # pyrefly: ignore [missing-import]
 from classification.base_classifier import BaseClassifier
 
@@ -44,7 +45,7 @@ class KFoldGridSearch(kt.GridSearch):
         X_arr = np.asarray(x)
         y_arr = np.asarray(y)
 
-        kf = KFold(n_splits=self.cv, shuffle=True, random_state=42)
+        kf = KFold(n_splits=self.cv, shuffle=True, random_state=global_variables.SEED)
         val_accs = []
 
         for train_idx, val_idx in kf.split(X_arr, y_arr):
@@ -82,7 +83,7 @@ class MLP(BaseClassifier):
         self._best_train_history: Optional[Dict[str, List[float]]] = None
 
         # Experiment reproducibility
-        set_random_seed(42)
+        set_random_seed(global_variables.SEED)
         enable_op_determinism()
 
 
@@ -228,6 +229,20 @@ class MLP(BaseClassifier):
 
     #----------------------------------------
 
+    def save_best_estimator(self, path_i: str) -> None:
+        """
+        Override of the base save_best_estimator method
+        """
+        if self._best_estimator is None:
+            logger.error("No best estimator found.")
+            return
+
+        self._best_estimator.save(path_i)
+        logger.info(f"Best estimator saved successfully to {path_i}.")
+            
+
+    #----------------------------------------
+
     @staticmethod
     def best_history_from_json(json_path_i: str) -> Dict[str, List[float]]:
         """
@@ -316,7 +331,6 @@ class MLP(BaseClassifier):
         p_epochs = self._param_grid.get("epochs", [10])
         p_regularizer = self._param_grid.get("regularizer", [None])
 
-        results = []
         best_val_acc = -1.0
 
         input_dim = X_train_i.shape[1] if hasattr(X_train_i, "shape") else len(X_train_i[0])
@@ -370,31 +384,28 @@ class MLP(BaseClassifier):
                                     f"Val Accuracy: {val_acc:.4f}, Val Loss: {val_loss:.4f}"
                                 )
 
-                                trial_result = {
-                                    "hidden_layers": layers,
-                                    "units": units,
-                                    "batch_size": batch_size,
-                                    "epochs": epochs,
-                                    "learning_rate": learning_rate,
-                                    "regularizer": f"({regularizer_name}, {regularizer_rate}) ", 
-                                    "accuracy": train_acc,
-                                    "val_accuracy": val_acc,
-                                    "loss": train_loss,
-                                    "val_loss": val_loss,
-                                }
-                                results.append(trial_result)
-
                                 if val_acc > best_val_acc:
                                     best_val_acc = val_acc
                                     self._best_score = float(val_acc)
-                                    self._best_params = trial_result
+                                    self._best_params = {
+                                        "hidden_layers": layers,
+                                        "units": units,
+                                        "batch_size": batch_size,
+                                        "epochs": epochs,
+                                        "learning_rate": learning_rate,
+                                        "regularizer": f"({regularizer_name}, {regularizer_rate}) ", 
+                                        "accuracy": train_acc,
+                                        "val_accuracy": val_acc,
+                                        "loss": train_loss,
+                                        "val_loss": val_loss
+                                    }
                                     self._best_estimator = mlp
                                     self._best_train_history = res.history
 
                                 # Deleting the model
                                 del mlp
                                     
-        logger.info(f"MLP cross-evaluation completed. Evaluated {len(results)} configurations.")
+        logger.info(f"MLP cross-evaluation completed. Evaluated {trial_idx} configurations.")
         logger.info(f"Best validation score: {self._best_score:.4f}" if self._best_score is not None else "Best validation score: N/A")
         logger.info(f"Best parameters: {self._best_params}")
 

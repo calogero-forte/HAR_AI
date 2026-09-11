@@ -253,4 +253,23 @@ class BaseClassifier(ABC):
         """
         pass
 
+    #----------------------------------------
+
+    @abstractmethod
+    def save_best_estimator(self, path_i: str) -> None:
+        """
+        Save the best estimator to a file
+
+        Parameters
+        ----------
+        path_i : str
+            The path to the file
+
+        Return
+        ------
+        None
+        """
+        pass
+
+
         

@@ -108,7 +108,7 @@ def reduce_by_pca(
     val_log = f", val shape={X_val_i.shape}" if X_val_i is not None else ""
     logger.info(f"Applying PCA reduction with variance ratio={variance_i} on train shape={X_train_i.shape}, test shape={X_test_i.shape}{val_log}")
 
-    pca = PCA(n_components=variance_i)
+    pca = PCA(n_components=variance_i, random_state=global_variables.SEED)
 
     # Train dataset
     X_train_pca = pca.fit_transform(X_train_i)

@@ -20,6 +20,7 @@ from sklearn.metrics import accuracy_score
 import global_variables
 # pyrefly: ignore [missing-import]
 from .base_classifier import BaseClassifier
+import joblib
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,19 @@ class RandomForest(BaseClassifier):
         """
         self._y_pred = super().predict(X_test_i, y_true_i, **kwargs)
         return self._y_pred
+
+    #----------------------------------------
+
+    def save_best_estimator(self, path_i: str) -> None:
+        """
+        Override of the base save_best_estimator method
+        """
+        if self._best_estimator is None:
+            logger.error("No best estimator found.")
+            return
+
+        joblib.dump(self._best_estimator, path_i)
+        logger.info(f"Best estimator saved successfully to {path_i}.")
 
     #----------------------------------------
 

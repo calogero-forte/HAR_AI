@@ -6,12 +6,12 @@ Revision: 		    1.6
 Last modify date: 	09/08/2026
 """
 
-from pandas._libs import indexing
-from pandas._libs import indexing
 import logging
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, GroupShuffleSplit
+# pyrefly: ignore [missing-import]
+import global_variables
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +179,7 @@ class DatasetHandler:
 
         if split_by_subject_i:
             if 'subject_id' in df_train_i.columns:
-                gss = GroupShuffleSplit(n_splits=1, test_size=val_split_i, random_state=42)
+                gss = GroupShuffleSplit(n_splits=1, test_size=val_split_i, random_state=global_variables.SEED)
                 train_idx, val_idx = next(gss.split(df_train_i, groups=df_train_i['subject_id']))
                 df_train = df_train_i.iloc[train_idx].copy()
                 df_val = df_train_i.iloc[val_idx].copy()
@@ -189,7 +189,7 @@ class DatasetHandler:
                 df_train, df_val = train_test_split(
                     df_train_i,
                     test_size=val_split_i,
-                    random_state=42,
+                    random_state=global_variables.SEED,
                     stratify=stratify_col
                 )
         else:
@@ -197,7 +197,7 @@ class DatasetHandler:
             df_train, df_val = train_test_split(
                 df_train_i,
                 test_size=val_split_i,
-                random_state=42,
+                random_state=global_variables.SEED,
                 stratify=stratify_col
             )
 
