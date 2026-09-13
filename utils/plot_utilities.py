@@ -101,7 +101,7 @@ def plot_heatmap(
     
     logger.info(f"Generating heatmap plot: '{title_i}' for data matrix shape: {np.shape(data_i)}")
 
-    fig = plt.figure(figsize=[5.4, 3.8], dpi=300)
+    fig = plt.figure(figsize=[6, 4.5], dpi=300)
     ax = fig.add_axes([0,0,1,1])
     sns.heatmap(data_i, annot=True, cmap=color_i, fmt=format_i)
     plt.title(title_i)

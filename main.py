@@ -2,8 +2,8 @@
 Module: 			main.py
 Project: 			ML_DL_Exam
 Author: 			Calogero Forte
-Revision: 		    1.12
-Last modify date: 	09/11/2026
+Revision: 		    1.13
+Last modify date: 	09/13/2026
 """
 
 import logging
@@ -33,6 +33,7 @@ TRAIN_ATASET_PATH = "./Dataset/train_dataset.csv"
 TEST_DATASET_PATH = "./Dataset/test_dataset.csv"
 BEST_TRAIN_HISTORY_PATH = "./best_train_history.json"
 BEST_MLP_PATH = "./best_mlp.h5"
+BEST_RF_PATH = "./best_rf.joblib"
 
 #------------------------------------------------------------------------------------------
 
@@ -70,30 +71,31 @@ handler.update_test_dataset(X_test_std)
 # Machine Learning model
 #------------------------------
 
-# # Classifier instance
-# rf = RandomForest()
-# # Parameters grid
-# param_grid = {
-#     "n_estimators": [100, 200],
-#     "max_depth": [None, 6, 10],
-#     "min_samples_split": [2, 5, 10],
-#     "min_samples_leaf": [1, 2],
-#     "max_features": ["sqrt", "log2"],
-#     "bootstrap": [True],
-# }
-# rf.set_param_grid(param_grid)
-# # Find the best parameters
-# logger.info("Starting hyperparameter tuning via cross-evaluation...")
-# rf.cross_evaluate( X_train_i=X_train_std, y_train_i=handler.get_train_set()[1], X_val_i=X_val_std, y_val_i=handler.get_val_set()[1] )
-# # Predict
-# logger.info("Running prediction on test set...")
-# rf.predict(X_test_i=X_test_std, y_true_i=handler.get_test_set()[1])
-# # Evaluation
-# logger.info("Evaluating Random Forest performance...")
-# print_classification_report(rf)
-# print_accuracy(rf)
-# plot_confution_matrix(rf)
-# logger.info("--- Machine Learning Pipeline Execution Complete ---")
+# Classifier instance
+rf = RandomForest()
+# Parameters grid
+param_grid = {
+    "n_estimators": [100, 200, 400],
+    "max_depth": [None, 6, 10],
+    "min_samples_split": [2, 5, 10],
+    "min_samples_leaf": [1, 2],
+    "max_features": ["sqrt", "log2"],
+    "bootstrap": [False, True],
+}
+rf.set_param_grid(param_grid)
+# Find the best parameters
+logger.info("Starting hyperparameter tuning via cross-evaluation...")
+rf.cross_evaluate( X_train_i=X_train_std, y_train_i=handler.get_train_set()[1], X_val_i=X_val_std, y_val_i=handler.get_val_set()[1] )
+# Predict
+logger.info("Running prediction on validation set...")
+rf.predict(X_test_i=X_val_std, y_true_i=handler.get_val_set()[1])
+# Evaluation
+logger.info("Evaluating Random Forest performance...")
+print_classification_report(rf)
+print_accuracy(rf)
+plot_confution_matrix(rf)
+rf.save_best_estimator(BEST_RF_PATH)
+logger.info("--- Machine Learning Pipeline Execution Complete ---")
 
 #------------------------------
 # Deep Learning model
@@ -114,8 +116,8 @@ mlp.set_param_grid(mlp_param_grid)
 logger.info("Starting hyperparameter tuning via cross-evaluation...")
 mlp.cross_evaluate(X_train_i=X_train_std, y_train_i=handler.get_train_set()[1], X_val_i=X_val_std, y_val_i=handler.get_val_set()[1])
 # Predict
-logger.info("Running prediction on test set...")
-mlp.predict(X_test_i=X_test_std, y_true_i=handler.get_test_set()[1])
+logger.info("Running prediction on validation set...")
+mlp.predict(X_test_i=X_val_std, y_true_i=handler.get_val_set()[1])
 # Evaluation
 logger.info("Evaluating MLP performance...")
 print_classification_report(mlp)
@@ -124,5 +126,19 @@ plot_confution_matrix(mlp)
 mlp.best_history_to_json(BEST_TRAIN_HISTORY_PATH)
 mlp.save_best_estimator(BEST_MLP_PATH)
 logger.info("--- Deep Learning Pipeline Execution Complete ---")
+
+#------------------------------
+# Prediction on best model
+#------------------------------
+
+# Predict
+logger.info("Running prediction of the MLP on test set...")
+mlp.predict(X_test_i=X_test_std, y_true_i=handler.get_test_set()[1])
+# Evaluation
+logger.info("Evaluating MLP performance on test set...")
+print_classification_report(mlp)
+print_accuracy(mlp)
+plot_confution_matrix(mlp)
+
 logger.info("--- End Of Execution ---")
 
